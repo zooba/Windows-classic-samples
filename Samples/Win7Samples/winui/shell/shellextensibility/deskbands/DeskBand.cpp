@@ -5,7 +5,7 @@
 #define RECTWIDTH(x)   ((x).right - (x).left)
 #define RECTHEIGHT(x)  ((x).bottom - (x).top)
 
-extern ULONG        g_cDllRef;
+extern long         g_cDllRef;
 extern HINSTANCE    g_hInst;
 
 extern CLSID CLSID_DeskBandSample;
@@ -13,8 +13,9 @@ extern CLSID CLSID_DeskBandSample;
 static const WCHAR g_szDeskBandSampleClass[] = L"DeskBandSampleClass";
 
 CDeskBand::CDeskBand() :
-    m_cRef(1), m_pSite(NULL), m_fHasFocus(FALSE), m_fIsDirty(FALSE), m_dwBandID(0), m_hwnd(NULL), m_hwndParent(NULL)
+    m_cRef(1), m_pSite(NULL), m_pInputObjectSite(NULL), m_fHasFocus(FALSE), m_fIsDirty(FALSE), m_dwBandID(0), m_hwnd(NULL), m_hwndParent(NULL)
 {
+    InterlockedIncrement(&g_cDllRef);
 }
 
 CDeskBand::~CDeskBand()
@@ -23,6 +24,11 @@ CDeskBand::~CDeskBand()
     {
         m_pSite->Release();
     }
+    if (m_pInputObjectSite)
+    {
+        m_pInputObjectSite->Release();
+    }
+    InterlockedDecrement(&g_cDllRef);
 }
 
 //
@@ -259,10 +265,19 @@ STDMETHODIMP CDeskBand::SetSite(IUnknown *pUnkSite)
     if (m_pSite)
     {
         m_pSite->Release();
+        m_pSite = NULL;
+    }
+    if (m_pInputObjectSite)
+    {
+        m_pInputObjectSite->Release();
+        m_pInputObjectSite = NULL;
     }
 
     if (pUnkSite)
     {
+        m_pSite = pUnkSite;
+        m_pSite->AddRef();
+
         IOleWindow *pow;
         hr = pUnkSite->QueryInterface(IID_IOleWindow, reinterpret_cast<void **>(&pow));
         if (SUCCEEDED(hr))
@@ -302,7 +317,10 @@ STDMETHODIMP CDeskBand::SetSite(IUnknown *pUnkSite)
             pow->Release();
         }
 
-        hr = pUnkSite->QueryInterface(IID_IInputObjectSite, reinterpret_cast<void **>(&m_pSite));
+        if (SUCCEEDED(hr))
+        {
+            pUnkSite->QueryInterface(IID_PPV_ARGS(&m_pInputObjectSite));
+        }
     }
 
     return hr;
@@ -351,9 +369,9 @@ void CDeskBand::OnFocus(const BOOL fFocus)
 {
     m_fHasFocus = fFocus;
 
-    if (m_pSite)
+    if (m_pInputObjectSite)
     {
-        m_pSite->OnFocusChangeIS(static_cast<IOleWindow*>(this), m_fHasFocus);
+        m_pInputObjectSite->OnFocusChangeIS(static_cast<IOleWindow*>(this), m_fHasFocus);
     }
 }
 

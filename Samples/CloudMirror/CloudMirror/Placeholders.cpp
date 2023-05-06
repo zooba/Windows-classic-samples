@@ -23,7 +23,7 @@
 //===============================================================
 
 void Placeholders::Create(
-    _In_ PCWSTR sourcePath,
+    _In_ PCWSTR sourcePathStr,
     _In_ PCWSTR sourceSubDirstr,
     _In_ PCWSTR destPath)
 {
@@ -33,21 +33,26 @@ void Placeholders::Create(
         HANDLE hFileHandle;
         CF_PLACEHOLDER_CREATE_INFO cloudEntry;
 
-        // make this either "subdirname\" or "" so that we can just always
-        // append it without worry
-        std::wstring sourceSubDir(sourceSubDirstr);
-        if (sourceSubDir[0])
+        // Ensure that the source path ends in a backslash.
+        std::wstring sourcePath(sourcePathStr);
+        if (sourcePath.back() != L'\\')
         {
-            sourceSubDir.append(L"\\");
+            sourcePath.push_back(L'\\');
         }
 
-        std::wstring fileName(sourcePath);
-        fileName.append(sourceSubDir);
-        fileName.append(L"\\*");
+        // Ensure that a nonempty subdirectory ends in a backslash.
+        std::wstring sourceSubDir(sourceSubDirstr);
+        if (sourceSubDir.length() && sourceSubDir.back() != '\\')
+        {
+            sourceSubDir.push_back(L'\\');
+        }
+
+        std::wstring filePattern = sourcePath + sourceSubDir + L"*";
+        std::wstring fullDestPath = std::wstring(destPath) + L'\\' + sourceSubDir;
 
         hFileHandle =
             FindFirstFileEx(
-                fileName.data(),
+                filePattern.c_str(),
                 FindExInfoStandard,
                 &findData,
                 FindExSearchNameMatch,
@@ -56,7 +61,7 @@ void Placeholders::Create(
 
         if (hFileHandle != INVALID_HANDLE_VALUE)
         {
-            do 
+            do
             {
                 if (!wcscmp(findData.cFileName, L".") ||
                     !wcscmp(findData.cFileName, L".."))
@@ -67,10 +72,10 @@ void Placeholders::Create(
                 std::wstring relativeName(sourceSubDir);
                 relativeName.append(findData.cFileName);
 
-                cloudEntry.FileIdentity = relativeName.data();
-                cloudEntry.FileIdentityLength = (USHORT)(wcslen(relativeName.data()) + 1) * sizeof(WCHAR);
+                cloudEntry.FileIdentity = relativeName.c_str();
+                cloudEntry.FileIdentityLength = (DWORD)((relativeName.size() + 1) * sizeof(WCHAR));
 
-                cloudEntry.RelativeFileName = relativeName.data();
+                cloudEntry.RelativeFileName = findData.cFileName;
                 cloudEntry.Flags = CF_PLACEHOLDER_CREATE_FLAG_MARK_IN_SYNC;
                 cloudEntry.FsMetadata.FileSize.QuadPart = ((ULONGLONG)findData.nFileSizeHigh << 32) + findData.nFileSizeLow;
                 cloudEntry.FsMetadata.BasicInfo.FileAttributes = findData.dwFileAttributes;
@@ -87,14 +92,14 @@ void Placeholders::Create(
 
                 try
                 {
-                    wprintf(L"Creating placeholder for %sx\n", relativeName.data());
-                    winrt::check_hresult(CfCreatePlaceholders(destPath, &cloudEntry, 1, CF_CREATE_FLAG_NONE, NULL));
+                    wprintf(L"Creating placeholder for %s\n", relativeName.c_str());
+                    winrt::check_hresult(CfCreatePlaceholders(fullDestPath.c_str(), &cloudEntry, 1, CF_CREATE_FLAG_NONE, NULL));
                 }
                 catch (...)
                 {
                     // winrt::to_hresult() will eat the exception if it is a result of winrt::check_hresult,
                     // otherwise the exception will get rethrown and this method will crash out as it should
-                    wprintf(L"Failed to create placeholder for %s with %08x\n", relativeName.data(), static_cast<HRESULT>(winrt::to_hresult()));
+                    wprintf(L"Failed to create placeholder for %s with %08x\n", relativeName.c_str(), static_cast<HRESULT>(winrt::to_hresult()));
                     // Eating it here lets other files still get a chance. Not worth crashing the sample, but
                     // certainly noteworthy for production code
                     continue;
@@ -108,19 +113,19 @@ void Placeholders::Create(
                     // This icon is just for the sample. You should provide your own branded icon here
                     prop.IconResource(L"shell32.dll,-44");
 
-                    wprintf(L"Applying custom state for %sx\n", relativeName.data());
-                    Utilities::ApplyCustomStateToPlaceholderFile(destPath, relativeName.data(), prop);
+                    wprintf(L"Applying custom state for %s\n", relativeName.c_str());
+                    Utilities::ApplyCustomStateToPlaceholderFile(destPath, relativeName.c_str(), prop);
 
                     if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
                     {
-                        Create(sourcePath, relativeName.data(), destPath);
+                        Create(sourcePath.c_str(), relativeName.c_str(), destPath);
                     }
                 }
                 catch (...)
                 {
                     // winrt::to_hresult() will eat the exception if it is a result of winrt::check_hresult,
                     // otherwise the exception will get rethrown and this method will crash out as it should
-                    wprintf(L"Failed to set custom state on %s with %08x\n", relativeName.data(), static_cast<HRESULT>(winrt::to_hresult()));
+                    wprintf(L"Failed to set custom state on %s with %08x\n", relativeName.c_str(), static_cast<HRESULT>(winrt::to_hresult()));
                     // Eating it here lets other files still get a chance. Not worth crashing the sample, but
                     // certainly noteworthy for production code
                 }

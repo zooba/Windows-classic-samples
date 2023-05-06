@@ -3,6 +3,8 @@
 This repo contains samples that demonstrate
 the API used in Windows classic desktop applications.
 
+**Note**. You can use Microsoft Visual Studio to search the entire set of source code here to see whether the usage of a particular Windows API is being demonstrated. Clone this repo (or download the ZIP) to your local file system. Then **Find in Files** in Visual Studio, set **Look in** to the folder you cloned or downloaded into, and search for an API name. You can install [Visual Studio](https://visualstudio.microsoft.com/downloads/) without expense. A Community edition is available&mdash;it's free for students, open-source contributors, and individuals.
+
 These samples demonstrate the functionality and programming model
 for Windows and Windows Server.
 This repo contains Visual Studio solution (SLN) files for each sample,
@@ -23,16 +25,14 @@ If you cannot get a sample to work as expected,
 it might have platform, version, or SKU-specific requirements.
 If you have any issues with the samples, please provide feedback using the Issues list.
 
-To get a copy of Windows, go to
-[Downloads and tools](http://go.microsoft.com/fwlink/p/?linkid=301696).
-
 To get a copy of Visual Studio, go to
 [Visual Studio Downloads](http://go.microsoft.com/fwlink/p/?linkid=301697).
 
-Other samples repos:
+Other samples:
 
 - [Windows Universal Samples (UWP)](https://github.com/Microsoft/Windows-universal-samples)
 - [Desktop Bridge to Universal Windows Platform (UWP)](https://github.com/Microsoft/DesktopBridgeToUWP-Samples)
+- [Code samples browser](https://docs.microsoft.com/samples/)
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
